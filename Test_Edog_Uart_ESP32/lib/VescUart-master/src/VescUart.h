@@ -152,12 +152,18 @@ class VescUart
          */
         void setRPM(float rpm, uint8_t canId);
 
-        
+
+        // Theophile Klein
+        // -------------------------------------
         void setPos(float pos); 
 
         void setPos(float pos, uint8_t canId);
 
+        void setPidPosOffset(float offset_deg);
 
+        void setPidPosOffset(float offset_deg, uint8_t canId);
+
+        //-------------------------------------
 
         /**
          * @brief      Set the duty of the motor

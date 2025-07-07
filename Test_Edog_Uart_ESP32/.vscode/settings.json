@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "string": "cpp",
+        "vector": "cpp",
+        "iomanip": "cpp",
+        "istream": "cpp",
+        "limits": "cpp",
+        "ostream": "cpp",
+        "sstream": "cpp",
+        "streambuf": "cpp",
+        "functional": "cpp"
+    }
+}
