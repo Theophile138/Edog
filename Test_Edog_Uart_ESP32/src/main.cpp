@@ -2,113 +2,58 @@
 #include <VescUart.h>
 
 VescUart MyVescUart;
+HardwareSerial VESCSerial(2);
 
-/** UART matériel utilisé sur l'ESP32 */
-HardwareSerial VESCSerial(2); // UART2
-
-void maxAngleDiffTest();
-
-// Définir les broches RX/TX utilisées pour la communication UART avec le VESC
 #define RXD2 16
 #define TXD2 17
 
+void homing();
+void testMove();
+
 void setup() {
-  Serial.begin(115200); 
+  Serial.begin(115200);
   VESCSerial.begin(115200, SERIAL_8N1, RXD2, TXD2);
   MyVescUart.setSerialPort(&VESCSerial);
+
+  delay(2000);
+  Serial.println("Début du homing");
+  homing();  // Calibre la position home
+  delay(1000);
+
+  Serial.println("Déplacement test");
+  testMove();
 }
 
 void loop() {
-
-for(int i = 0 ; i < 360 ; i++){
-  MyVescUart.setPos(i); // Positionne le moteur à i degrés
-  delay(5);
-  //Serial.print("Positionnement du moteur à ");
-  //Serial.println(i);
-  
-  //delay(10); // Attend 1 sec
-  
-  //if (MyVescUart.getVescValues()) {
-  //  Serial.print("Position actuelle: ");
-  //  Serial.println(MyVescUart.data.pidPos);
-  //} else {
-  //  Serial.println("Échec de la communication avec le VESC.");
-  //}
+  testMove();
 }
 
-delay(1000); 
+// Homing: on considère la position actuelle comme 0
+void homing() {
+  if (MyVescUart.getVescValues()) {
+    float current_pos = MyVescUart.data.pidPos;  // position actuelle en tours
+    Serial.print("Position actuelle VESC (tours): ");
+    Serial.println(current_pos, 6);
 
+    MyVescUart.setPidPosOffset(current_pos, 3);  // envoi la commande
 
-for(int i = 0 ; i < 90 ; i++){
-  MyVescUart.setPos(i,3); 
-  delay(5);
+    delay(100);  // temps pour que le VESC applique l'offset
+
+    Serial.println("Commande offset PID position envoyée (homing OK).");
+  } else {
+    Serial.println("Erreur de lecture des valeurs VESC pour homing.");
+  }
 }
 
-delay(1000);
+// Test: déplacement à 90° (0.25 tours) puis retour à 0
+void testMove() {
+  Serial.println("Déplacement vers 90 degrés (0.25 tours)");
+  MyVescUart.setPos(25, 3);  // 90° en tours
+  delay(3000);
 
+  Serial.println("Retour à la position home (0 tours)");
+  MyVescUart.setPos(0, 3);
+  delay(3000);
 
-for(int i = 90 ; i > 0 ; i--){
-  MyVescUart.setPos(i,3); 
-  delay(5);
-}
-
-  delay(1000); 
-
-for(int i = 45 ; i > 0 ; i--){
-  MyVescUart.setPos(i); 
-  delay(5);
-}
-
-delay(1000);
-
-}
-
-void homing(){
-
-}
-
-void maxAngleDiffTest(){
-
-  
-  bool stop = false;
-
-  float angle_recherche = 0.0;
-  float angle_depart = 0.0;
-  
-  const int incrementation = 10.0; 
-
-  MyVescUart.setPos(angle_recherche); 
-
-  while(!stop){
-    if (MyVescUart.getVescValues()) {
-
-      if(MyVescUart.data.error != FAULT_CODE_NONE) {
-
-        if( MyVescUart.data.error == FAULT_CODE_ABS_OVER_CURRENT) {
-          Serial.println("Angle MAX : "+String(angle_recherche)+" Angle de départ: " + String(angle_depart));
-          angle_depart += 10;
-          angle_recherche = angle_depart;
-          MyVescUart.setPos(angle_recherche);
-        }else{
-          Serial.print("Erreur VESC: ");
-          Serial.println(MyVescUart.data.error);
-          stop = true;
-        }
-      }
-
-
-      Serial.print("Position actuelle: ");
-      Serial.println(MyVescUart.data.pidPos);
-      if (MyVescUart.data.pidPos == angle_recherche) {
-        Serial.println("Position atteinte: " + String(angle_recherche));
-        angle_recherche += incrementation;
-        MyVescUart.setPos(angle_recherche);
-
-      } else {
-        Serial.println("Échec de la communication avec le VESC.");
-        stop = true;
-      }
-    }
-    delay(1000);
-  } 
+  Serial.println("Fin du test de déplacement.");
 }
