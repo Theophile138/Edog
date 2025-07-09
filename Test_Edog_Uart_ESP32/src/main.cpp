@@ -22,7 +22,7 @@ void loop() {
 
 //maxAngleDiffTest();
 
-for(int i = 0 ; i < 360 ; i++){
+for(int i = 0 ; i < 45 ; i++){
   MyVescUart.setPos(i); // Positionne le moteur à i degrés
   delay(5);
   //Serial.print("Positionnement du moteur à ");
@@ -38,7 +38,30 @@ for(int i = 0 ; i < 360 ; i++){
   //}
 }
 
-  delay(1000); // Attend 5 sec avant de recommencer
+delay(1000); 
+
+
+for(int i = 0 ; i < 90 ; i++){
+  MyVescUart.setPos(i,3); 
+  delay(5);
+}
+
+delay(1000);
+
+
+for(int i = 90 ; i > 0 ; i--){
+  MyVescUart.setPos(i,3); 
+  delay(5);
+}
+
+  delay(1000); 
+
+for(int i = 45 ; i > 0 ; i--){
+  MyVescUart.setPos(i); 
+  delay(5);
+}
+
+delay(1000);
 
 }
 
