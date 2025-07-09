@@ -375,60 +375,6 @@ void VescUart::setRPM(float rpm, uint8_t canId) {
 	packSendPayload(payload, payloadSize);
 }
 
-// Theophile Klein
-//------------------------------------
-
-void VescUart::setPos(float pos) {
-	return setPos(pos, 0);
-}
-
-//Set position in degrees
-void VescUart::setPos(float pos, uint8_t canId) {
-    int32_t index = 0;
-    int payloadSize = (canId == 0 ? 5 : 7);
-    uint8_t payload[payloadSize];
-
-    if (canId != 0) {
-        payload[index++] = COMM_FORWARD_CAN;  // Demande à relayer via CAN
-        payload[index++] = canId;             // ID du VESC destinataire sur le bus CAN
-    }
-
-    payload[index++] = COMM_SET_POS;          // Commande pour régler la position
-    buffer_append_int32(payload, (int32_t)(pos * 1000000.0), &index); // Position encodée
-
-    packSendPayload(payload, payloadSize);    // Envoie via UART
-}
-
-void VescUart::setPidPosOffset(float offset_deg) {
-	return setPidPosOffset(offset_deg, 0); 
-}
-
-void VescUart::setPidPosOffset(float offset_deg, uint8_t canId) {
-	if (debugPort != NULL) {
-		debugPort->println("Command: CAN_PACKET_UPDATE_PID_POS_OFFSET " + String(canId));
-		debugPort->print("Offset (deg): "); debugPort->println(offset_deg);
-	}
-
-
-	int32_t index = 0;
-	int payloadSize = (canId == 0 ? 5 : 7);
-	uint8_t payload[payloadSize];
-
-	if (canId != 0) {
-		payload[index++] = COMM_FORWARD_CAN;
-		payload[index++] = canId;
-	}
-
-	payload[index++] = CAN_PACKET_UPDATE_PID_POS_OFFSET;
-	buffer_append_float32(payload, offset_deg, 1000000.0, &index);
-
-	packSendPayload(payload, payloadSize);
-}
-
-
-//------------------------------------
-
-
 void VescUart::setDuty(float duty) {
 	return setDuty(duty, 0);
 }
@@ -491,4 +437,52 @@ void VescUart::printVescValues() {
 		debugPort->print("tempMotor: "); 		debugPort->println(data.tempMotor);
 		debugPort->print("error: "); 			debugPort->println(data.error);
 	}
+}
+
+
+void VescUart::setPos(float pos) {
+	return setPos(pos, 0);
+}
+
+//Set position in degrees
+void VescUart::setPos(float pos, uint8_t canId) {
+    int32_t index = 0;
+    int payloadSize = (canId == 0 ? 5 : 7);
+    uint8_t payload[payloadSize];
+
+    if (canId != 0) {
+        payload[index++] = COMM_FORWARD_CAN;  // Demande à relayer via CAN
+        payload[index++] = canId;             // ID du VESC destinataire sur le bus CAN
+    }
+
+    payload[index++] = COMM_SET_POS;          // Commande pour régler la position
+    buffer_append_int32(payload, (int32_t)(pos * 1000000.0), &index); // Position encodée
+
+    packSendPayload(payload, payloadSize);    // Envoie via UART
+}
+
+void VescUart::setPidPosOffset(float offset_deg) {
+	return setPidPosOffset(offset_deg, 0); 
+}
+
+void VescUart::setPidPosOffset(float offset_deg, uint8_t canId) {
+	if (debugPort != NULL) {
+		debugPort->println("Command: CAN_PACKET_UPDATE_PID_POS_OFFSET " + String(canId));
+		debugPort->print("Offset (deg): "); debugPort->println(offset_deg);
+	}
+
+
+	int32_t index = 0;
+	int payloadSize = (canId == 0 ? 5 : 7);
+	uint8_t payload[payloadSize];
+
+	if (canId != 0) {
+		payload[index++] = COMM_FORWARD_CAN;
+		payload[index++] = canId;
+	}
+
+	payload[index++] = CAN_PACKET_UPDATE_PID_POS_OFFSET;
+	buffer_append_float32(payload, offset_deg, 1000000.0, &index);
+
+	packSendPayload(payload, payloadSize);
 }

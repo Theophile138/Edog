@@ -152,19 +152,6 @@ class VescUart
          */
         void setRPM(float rpm, uint8_t canId);
 
-
-        // Theophile Klein
-        // -------------------------------------
-        void setPos(float pos); 
-
-        void setPos(float pos, uint8_t canId);
-
-        void setPidPosOffset(float offset_deg);
-
-        void setPidPosOffset(float offset_deg, uint8_t canId);
-
-        //-------------------------------------
-
         /**
          * @brief      Set the duty of the motor
          * @param      duty  - The desired duty (0.0-1.0)
@@ -193,6 +180,14 @@ class VescUart
          * @brief      Help Function to print struct dataPackage over Serial for Debug
          */
         void printVescValues(void);
+
+        void setPos(float pos); 
+
+        void setPos(float pos, uint8_t canId);
+
+        void setPidPosOffset(float offset_deg);
+
+        void setPidPosOffset(float offset_deg, uint8_t canId);
 
 	private: 
 
