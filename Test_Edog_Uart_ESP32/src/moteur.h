@@ -25,10 +25,20 @@ class Moteur
 
     ERROR Refresh_Values();
     ERROR Refresh();
-    //Moteur Homing
+    
+    bool isConnected();
+    
+    float getCurrentPosition();
+
+    bool finish();
+
   private:
     
+    float theoricalPosToReel(float theoricalPos);
+
     bool _debugMode;
+
+    bool _inPosition;
 
     unsigned long lastUpdateTime = 0; // Last time the motor was updated
 

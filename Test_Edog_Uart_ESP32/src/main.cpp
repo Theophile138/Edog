@@ -4,8 +4,8 @@
 
 VescUart MyVescUart;
 
-Moteur Moteur1(&MyVescUart, 0, 10, 1 , true); // Création d'une instance de la classe Moteur
-Moteur Moteur2(&MyVescUart, 3, 10, 1 , true); // Création d'une instance de la classe Moteur
+Moteur Moteur1(&MyVescUart, 0, 20, 1 , false); // Création d'une instance de la classe Moteur
+Moteur Moteur2(&MyVescUart, 3, 10, 1 , false); // Création d'une instance de la classe Moteur
 
 /** UART matériel utilisé sur l'ESP32 */
 HardwareSerial VESCSerial(2); // UART2
@@ -14,42 +14,41 @@ HardwareSerial VESCSerial(2); // UART2
 #define RXD2 16
 #define TXD2 17
 
-String inputString = "";      // Stocke la ligne entrée
-bool inputComplete = false;   // Drapeau de fin de ligne
+String inputString = "";   
+bool inputComplete = false;  
+
+int marcheStep = 0;
+bool activeMarche = false;
 
 void parseCommand(String command);
+void marche();
+void marcheRefresh();
 
 void setup() {
   Serial.begin(115200); 
   VESCSerial.begin(115200, SERIAL_8N1, RXD2, TXD2);
   MyVescUart.setSerialPort(&VESCSerial);
-  inputString.reserve(50);  // réserve un peu de mémoire
+  
+  inputString.reserve(50); 
 
   delay(1000);
 
-  Serial.println("Initialisation des moteurs...");
-
   Serial.println(Moteur1.begin()); // Initialisation du moteur 1
   Serial.println(Moteur2.begin()); // Initialisation du moteur 2
-   
-  Serial.println("Force homing");
-  
-  //Moteur1.ForceSetOffset(0.0f); // Position initiale du moteur 1
-  //Moteur2.ForceSetOffset(0.0f); // Position initiale
 
   Moteur1.SoftwareOffset(0.0f); // Position initiale du moteur 1
   Moteur2.SoftwareOffset(0.0f); // Position initiale du
-
-  //Moteur1.setTargetPos(90.0f); // Position cible du moteur 1
-  //Moteur2.setTargetPos(90.0f); // Position cible du moteur
 }
 
 void loop() {
-  // Lecture manuelle du port série
+  //Moteur1.Refresh();
+  //Moteur2.Refresh();
   
-  Moteur1.Refresh();
-  Moteur2.Refresh();
-  
+  Moteur1.Refresh_Values(); // Met à jour les valeurs du moteur 1
+  Moteur2.Refresh_Values(); // Met à jour les valeurs du moteur 2
+
+  marcheRefresh();
+
   while (Serial.available()) {
     char inChar = (char)Serial.read();
     if (inChar == '\n') {
@@ -59,34 +58,135 @@ void loop() {
     }
   }
 
-  // Si une ligne complète est reçue
   if (inputComplete) {
-    parseCommand(inputString);  // interprétation de la commande
-    inputString = "";           // reset
+    parseCommand(inputString);  
+    inputString = "";           
     inputComplete = false;
   }
 }
 
-// 📦 Fonction pour analyser la commande
+bool isNumber(String str) {
+  str.trim();
+  if (str.length() == 0) return false;
+  bool decimalPoint = false;
+  for (unsigned int i = 0; i < str.length(); i++) {
+    if (isDigit(str.charAt(i))) continue;
+    if (str.charAt(i) == '.' && !decimalPoint) {
+      decimalPoint = true;
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
+void marcheRefresh() {
+  if (activeMarche) {
+    marche();
+  }
+}
+
+void marche(){
+
+  if(Moteur1.finish() && Moteur2.finish()) {
+    if (marcheStep == 0) {
+      Serial.println("Marche étape 1 : Moteur1 à 90° et Moteur2 à 45°");
+      Moteur1.setTargetPos(110.0f); // Position du moteur 1
+      Moteur2.setTargetPos(180.0f); // Position du moteur 2
+      marcheStep = 1;
+    } else if (marcheStep == 1) {
+      Serial.println("Marche étape 2 : Moteur1 à 0° et Moteur2 à 0°");
+      Moteur1.setTargetPos(0.0f); // Position du moteur 1
+      Moteur2.setTargetPos(0.0f); // Position du moteur 2
+      marcheStep = 2;
+    } else {
+      Serial.println("Marche terminée, réinitialisation des moteurs.");
+      marcheStep = 0;
+    }
+  }
+}
+
+
 void parseCommand(String command) {
-  command.trim(); // supprime les espaces / \n
+  command.trim();
   command.toLowerCase();
 
-  // Exemple de commande : "moteur1 90"
+  // Découpe la commande en deux mots (cmd + cible)
   int spaceIndex = command.indexOf(' ');
-  if (spaceIndex == -1) return; // pas d'espace trouvé → commande invalide
+  if (spaceIndex == -1) {
+    // Ajout pour détecter "marche" sans argument
+    if (command == "marche") {
+      activeMarche = true;
+      return;
+    } else if (command == "stop") {
+      activeMarche = false;
+      marcheStep = 0;
+      Moteur1.setTargetPos(0.0f); // Position du moteur 1
+      Moteur2.setTargetPos(0.0f); // Position du moteur 2
+      Serial.println("Marche arrêtée.");
+      return;
+    }
+    Serial.println("Commande invalide !");
+    return;
+  }
 
-  String moteur = command.substring(0, spaceIndex);
-  String angleStr = command.substring(spaceIndex + 1);
-  float angle = angleStr.toFloat();
+  String action = command.substring(0, spaceIndex);
+  String target = command.substring(spaceIndex + 1);
 
-  if (moteur == "moteur1") {
-    Moteur1.setTargetPos(angle);
-    Serial.println("Commande envoyée à Moteur1: " + String(angle));
-  } else if (moteur == "moteur2") {
-    Moteur2.setTargetPos(angle);
-    Serial.println("Commande envoyée à Moteur2: " + String(angle));
+  bool commandValide = true;
+
+  // --- Commandes à argument numérique ---
+  if (isNumber(target)) {
+    float value = target.toFloat();
+
+    if (action == "moteur1") {
+      Moteur1.setTargetPos(value);
+      Serial.println("Moteur1 → pos = " + String(value));
+    } else if (action == "moteur2") {
+      Moteur2.setTargetPos(value);
+      Serial.println("Moteur2 → pos = " + String(value));
+    } else {
+      commandValide = false;
+    }
+
+  // --- Commandes sans nombre ---
   } else {
-    Serial.println("Moteur inconnu : " + moteur);
+    if (target == "moteur1") {
+      if (action == "homing") {
+        Moteur1.SoftwareOffset(0.0f);
+        Serial.println("Homing Moteur1");
+        Serial.println(Moteur1.getCurrentPosition());
+      } else if (action == "check") {
+        if (Moteur1.isConnected()) {
+          Serial.println("Moteur1 connecté");
+        } else {
+          Serial.println("Moteur1 non connecté");
+        }
+      } else {
+        commandValide = false;
+      }
+
+    } else if (target == "moteur2") {
+      if (action == "homing") {
+        Moteur2.SoftwareOffset(0.0f);
+        Serial.println("Homing Moteur2");
+        Serial.println(Moteur2.getCurrentPosition());
+      } else if (action == "check") {
+        if (Moteur2.isConnected()) {
+          Serial.println("Moteur2 connecté");
+        } else {
+          Serial.println("Moteur2 non connecté");
+        }
+      } else {
+        commandValide = false;
+      }
+
+    } else {
+      commandValide = false;
+    }
+  }
+
+  if (!commandValide) {
+    Serial.println("Commande inconnue : " + command);
   }
 }
