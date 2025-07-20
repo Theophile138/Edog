@@ -56,9 +56,28 @@
         <h2 class="text-2xl font-semibold mb-4">ESP32</h2>
         <div class="bg-white p-4 rounded shadow space-y-4">
           <div>
-            <label class="block font-semibold mb-1">Firmware :</label>
-            <input type="file" id="firmware-upload" class="border p-2 w-full">
+            <label class="block font-semibold mb-1">Add Firmware :</label>
+            <div class="flex justify-between items-center gap-2">
+              <input type="file" id="firmware-upload-file" class="border p-2 w-full">
+              <button class="bg-green-500 text-white px-3 py-1 rounded disabled:bg-gray-500 disabled:cursor-not-allowed"
+                  onclick="UploadFirmware()">Upload</button>
+            </div>
           </div>
+
+          <div>
+            <label class="block font-semibold mb-1">List of firmware :</label>
+            <div class="flex justify-between items-center gap-2">
+              <select id="firmware-select" class="border p-2 flex-1">
+                <option>NONE</option>
+              </select>
+              <button onclick="refreshFirmware()" class="bg-green-500 text-white px-3 py-1 rounded whitespace-nowrap">Refresh</button>
+              <button onclick="deleteFirmware()" class="bg-red-500 text-white px-3 py-1 rounded whitespace-nowrap">Delete</button>
+            </div>
+          </div>
+
+          <button class="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-gray-500 disabled:cursor-not-allowed"
+                  onclick="flashFirmware()">Flash ESP32</button>
+
           <div>
             <label class="block font-semibold mb-1">Port COM :</label>
             <div class="flex justify-between items-center gap-2">
@@ -74,8 +93,7 @@
                   onclick="connectESP32()">Connect ESP32</button>
           <button class="bg-red-500 text-white px-4 py-2 rounded disabled:bg-gray-400 disabled:cursor-not-allowed"
                   onclick="disconnectESP32()">Disconnect ESP32</button>
-          <button class="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-gray-500 disabled:cursor-not-allowed"
-                  onclick="flashFirmware()">Flash ESP32</button>
+
         </div>
       </section>
 

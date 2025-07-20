@@ -70,7 +70,7 @@ loader.load('/foot_v1.stl', function (geometry) {
 
 // WebSocket : ne modifie que la rotation X
 const host = window.location.hostname === "localhost" ? "localhost" : window.location.hostname;
-const socket = new WebSocket(`ws://${host}:8765/ws`);
+const socket = new WebSocket(`ws://${host}:8765`);
 //const socket = new WebSocket(`ws://${window.location.hostname}:8765`);
 
 socket.addEventListener('message', function (event) {
