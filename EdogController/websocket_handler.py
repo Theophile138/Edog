@@ -259,7 +259,7 @@ async def read_serial_loop(websocket):
                 "error": str(e)
             }))
             break
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0.0001)
 
 
 async def websocket_handler(websocket):
