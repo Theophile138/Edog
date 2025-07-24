@@ -32,6 +32,8 @@ class Moteur
 
     bool finish();
 
+    void stop();
+
   private:
     
     float theoricalPosToReel(float theoricalPos);

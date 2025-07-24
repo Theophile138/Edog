@@ -146,6 +146,8 @@ void Moteur::ForceSetOffset(float offset_deg) {
 
 void Moteur::SoftwareOffset(float offset_deg) {
     
+    Serial.print("Setting software offset to: ");
+
     if (_MyVescUart->getVescValues(_canId)) {
 
         _softwareOffset = _MyVescUart->data.pidPos - offset_deg; // Set the software offset
@@ -234,4 +236,16 @@ bool Moteur::isConnected() {
 
 bool Moteur::finish() {
     return _inPosition;
+}
+
+void Moteur::stop() {
+
+    _MyVescUart->setCurrent(0.0f, _canId); // Stop the motor by setting current to 0
+    _inPosition = true; // Mark the motor as in position
+
+    _targetPos = _theoreticalPos;
+
+    if (_debugMode) {
+        Serial.println("Motor stopped.");
+    }
 }

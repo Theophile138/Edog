@@ -3,16 +3,24 @@
 #include "moteur.h"
 
 VescUart MyVescUart;
+VescUart MyVescUart2;
 
 Moteur Moteur1(&MyVescUart, 0, 20, 1 , false); // Création d'une instance de la classe Moteur
-Moteur Moteur2(&MyVescUart, 3, 10, 1 , false); // Création d'une instance de la classe Moteur
+Moteur Moteur2(&MyVescUart2, 0, 10, 1 , false); // Création d'une instance de la classe Moteur
+
+// ------------------- ESP32 -------------------
 
 /** UART matériel utilisé sur l'ESP32 */
-HardwareSerial VESCSerial(2); // UART2
+//HardwareSerial VESCSerial(2); // UART2
 
 // Définir les broches RX/TX utilisées pour la communication UART avec le VESC
-#define RXD2 16
-#define TXD2 17
+//#define RXD2 16
+//#define TXD2 17
+
+// ---------------------------------------------
+
+#define HWSERIAL Serial2
+#define HWSERIAL2 Serial5
 
 String inputString = "";   
 bool inputComplete = false;  
@@ -23,11 +31,24 @@ bool activeMarche = false;
 void parseCommand(String command);
 void marche();
 void marcheRefresh();
+void handleButtonInterrupt();
+
+#define BUTTON_PIN 33
+volatile bool buttonPressed = false;
 
 void setup() {
   Serial.begin(115200); 
-  VESCSerial.begin(115200, SERIAL_8N1, RXD2, TXD2);
-  MyVescUart.setSerialPort(&VESCSerial);
+  
+  //Pour esp32 
+  //VESCSerial.begin(115200, SERIAL_8N1, RXD2, TXD2);
+  //MyVescUart.setSerialPort(&VESCSerial);
+
+  HWSERIAL.begin(115200);
+  HWSERIAL2.begin(115200);
+
+  MyVescUart.setSerialPort(&HWSERIAL);
+  MyVescUart2.setSerialPort(&HWSERIAL2);
+  
   
   inputString.reserve(50); 
 
@@ -38,6 +59,10 @@ void setup() {
 
   Moteur1.SoftwareOffset(0.0f); // Position initiale du moteur 1
   Moteur2.SoftwareOffset(0.0f); // Position initiale du
+
+  pinMode(BUTTON_PIN, INPUT_PULLUP); // Le bouton connecté à GND
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), handleButtonInterrupt, FALLING);
+
 }
 
 void loop() {
@@ -62,6 +87,16 @@ void loop() {
     parseCommand(inputString);  
     inputString = "";           
     inputComplete = false;
+  }
+
+    if (buttonPressed) {
+    buttonPressed = false; // Reset le flag
+      activeMarche = false;
+    Moteur1.stop();         // Appel sûr ici
+    Moteur2.stop();
+    Serial.println("button stop appuyer");
+
+    delay(500); // Attendre un peu pour éviter les rebonds du bouton
   }
 }
 
@@ -118,13 +153,16 @@ void parseCommand(String command) {
     if (command == "marche") {
       activeMarche = true;
       return;
-    } else if (command == "stop") {
+    } else if (command == "arret") {
       activeMarche = false;
       marcheStep = 0;
       Moteur1.setTargetPos(0.0f); // Position du moteur 1
       Moteur2.setTargetPos(0.0f); // Position du moteur 2
       Serial.println("Marche arrêtée.");
       return;
+    } else if (command == "stop"){
+      Moteur1.stop();
+      Moteur2.stop();
     }
     Serial.println("Commande invalide !");
     return;
@@ -189,4 +227,8 @@ void parseCommand(String command) {
   if (!commandValide) {
     Serial.println("Commande inconnue : " + command);
   }
+}
+
+void handleButtonInterrupt() {
+  buttonPressed = true;
 }
