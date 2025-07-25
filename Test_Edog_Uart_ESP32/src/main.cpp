@@ -2,11 +2,11 @@
 #include <VescUart.h>
 #include "moteur.h"
 
-VescUart MyVescUart;
-VescUart MyVescUart2;
+VescUart Vesc_Port_Uart_2;
+VescUart Vesc_Port_Uart_5;
 
-Moteur Moteur1(&MyVescUart, 0, 20, 1 , false); // Création d'une instance de la classe Moteur
-Moteur Moteur2(&MyVescUart2, 0, 10, 1 , false); // Création d'une instance de la classe Moteur
+Moteur Moteur1(&Vesc_Port_Uart_2, 0, 20, 1 , false);
+Moteur Moteur2(&Vesc_Port_Uart_5, 0, 10, 1 , false);
 
 // ------------------- ESP32 -------------------
 
@@ -18,9 +18,6 @@ Moteur Moteur2(&MyVescUart2, 0, 10, 1 , false); // Création d'une instance de l
 //#define TXD2 17
 
 // ---------------------------------------------
-
-#define HWSERIAL Serial2
-#define HWSERIAL2 Serial5
 
 String inputString = "";   
 bool inputComplete = false;  
@@ -37,28 +34,31 @@ void handleButtonInterrupt();
 volatile bool buttonPressed = false;
 
 void setup() {
-  Serial.begin(115200); 
-  
-  //Pour esp32 
+    
+// ------------------- ESP32 -------------------
   //VESCSerial.begin(115200, SERIAL_8N1, RXD2, TXD2);
   //MyVescUart.setSerialPort(&VESCSerial);
+// ---------------------------------------------
 
-  HWSERIAL.begin(115200);
-  HWSERIAL2.begin(115200);
+  Serial.begin(115200); 
+  Serial2.begin(115200);
+  Serial5.begin(115200);
 
-  MyVescUart.setSerialPort(&HWSERIAL);
-  MyVescUart2.setSerialPort(&HWSERIAL2);
-  
+  Vesc_Port_Uart_2.setSerialPort(&Serial5);
+  Vesc_Port_Uart_5.setSerialPort(&Serial2);
   
   inputString.reserve(50); 
 
-  delay(1000);
+  delay(100);
 
-  Serial.println(Moteur1.begin()); // Initialisation du moteur 1
-  Serial.println(Moteur2.begin()); // Initialisation du moteur 2
+  Serial.println("Initialisation des moteurs...");
+  Serial.print("Etat moteur 1 : ");
+  Serial.println(Moteur1.begin());
+  Serial.print("Etat moteur 2 : ");
+  Serial.println(Moteur2.begin());
 
-  Moteur1.SoftwareOffset(0.0f); // Position initiale du moteur 1
-  Moteur2.SoftwareOffset(0.0f); // Position initiale du
+  Moteur1.SoftwareOffset(0.0f);
+  Moteur2.SoftwareOffset(0.0f); 
 
   pinMode(BUTTON_PIN, INPUT_PULLUP); // Le bouton connecté à GND
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), handleButtonInterrupt, FALLING);
@@ -69,8 +69,8 @@ void loop() {
   //Moteur1.Refresh();
   //Moteur2.Refresh();
   
-  Moteur1.Refresh_Values(); // Met à jour les valeurs du moteur 1
-  Moteur2.Refresh_Values(); // Met à jour les valeurs du moteur 2
+  Moteur1.Refresh_Values(); 
+  Moteur2.Refresh_Values(); 
 
   marcheRefresh();
 
@@ -90,14 +90,12 @@ void loop() {
   }
 
     if (buttonPressed) {
-    buttonPressed = false; // Reset le flag
+      buttonPressed = false;
       activeMarche = false;
-    Moteur1.stop();         // Appel sûr ici
-    Moteur2.stop();
-    Serial.println("button stop appuyer");
-
-    delay(500); // Attendre un peu pour éviter les rebonds du bouton
-  }
+      Moteur1.stop();        
+      Moteur2.stop();
+      Serial.println("button stop appuyer");
+    }
 }
 
 bool isNumber(String str) {
@@ -126,8 +124,8 @@ void marche(){
   if(Moteur1.finish() && Moteur2.finish()) {
     if (marcheStep == 0) {
       Serial.println("Marche étape 1 : Moteur1 à 90° et Moteur2 à 45°");
-      Moteur1.setTargetPos(110.0f); // Position du moteur 1
-      Moteur2.setTargetPos(180.0f); // Position du moteur 2
+      Moteur1.setTargetPos(90.0f); // Position du moteur 1
+      Moteur2.setTargetPos(100.0f); // Position du moteur 2
       marcheStep = 1;
     } else if (marcheStep == 1) {
       Serial.println("Marche étape 2 : Moteur1 à 0° et Moteur2 à 0°");
@@ -200,7 +198,19 @@ void parseCommand(String command) {
         } else {
           Serial.println("Moteur1 non connecté");
         }
-      } else {
+      } else if (action == "debug") {
+
+        while(true){
+        if (Moteur1.isConnected()) {
+          Serial.println("Moteur1 connecté");
+          Serial2.println("hello");
+        } else {
+          Serial.println("Moteur1 non connecté");
+          Serial2.println("hello");
+        }
+        }
+
+      }else {
         commandValide = false;
       }
 
@@ -215,7 +225,20 @@ void parseCommand(String command) {
         } else {
           Serial.println("Moteur2 non connecté");
         }
-      } else {
+      }else if (action == "debug") {
+
+        while(true){
+        if (Moteur2.isConnected()) {
+          Serial.println("Moteur2 connecté");
+          //Serial5.println("hello");
+        } else {
+          Serial.println("Moteur2 non connecté");
+          //Serial5.println("hello");
+        }
+        }
+
+      }
+       else {
         commandValide = false;
       }
 
