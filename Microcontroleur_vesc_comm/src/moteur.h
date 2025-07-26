@@ -14,12 +14,10 @@ class Moteur
 {
   public:
     Moteur(VescUart* MyVescUart, uint8_t canId, int timeBetweenSteps = 5, int maxAngleDiff = 1, bool debugMode = false);
+    
     ERROR begin();
     
     ERROR setTargetPos(float targetPos);
-
-    // This method don't work
-    void ForceSetOffset(float offset_deg);
 
     void SoftwareOffset(float offset_deg);
 

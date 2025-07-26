@@ -123,27 +123,6 @@ ERROR Moteur::Refresh() {
     return NONE;
 }
 
-void Moteur::ForceSetOffset(float offset_deg) {
-    // Force the motor to a specific position by setting the theoretical position directly
-    _MyVescUart->setPidPosOffset(0, _canId);
-    
-    if (_MyVescUart->getVescValues(_canId)) {
-        //float degOffset = offset_deg + _MyVescUart->data.pidPos; // Calculate the offset from the current position
-        //_MyVescUart->setPidPosOffset(degOffset, _canId);
-        
-        if (_debugMode) {
-            _MyVescUart->getVescValues(_canId); // Refresh values to get the current position
-            Serial.print("Current Position after setting offset: ");
-            Serial.println(_MyVescUart->data.pidPos);
-        }
-
-    } else {
-        if (_debugMode) {
-        Serial.println("Failed to get VESC values for offset setting!");
-        }
-    }
-}
-
 void Moteur::SoftwareOffset(float offset_deg) {
     
     Serial.print("Setting software offset to: ");

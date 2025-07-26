@@ -34,18 +34,23 @@ void handleButtonInterrupt();
 volatile bool buttonPressed = false;
 
 void setup() {
-    
+   
+   Serial.begin(115200);  
+
 // ------------------- ESP32 -------------------
   //VESCSerial.begin(115200, SERIAL_8N1, RXD2, TXD2);
   //MyVescUart.setSerialPort(&VESCSerial);
 // ---------------------------------------------
 
-  Serial.begin(115200); 
+// ------------------- Teensy -------------------
   Serial2.begin(115200);
   Serial5.begin(115200);
-
+  
   Vesc_Port_Uart_2.setSerialPort(&Serial5);
   Vesc_Port_Uart_5.setSerialPort(&Serial2);
+// ---------------------------------------------
+
+
   
   inputString.reserve(50); 
 
