@@ -1,12 +1,15 @@
 #include <Arduino.h>
 #include <VescUart.h>
 #include "moteur.h"
+#include "command_interpreter.h"
 
 VescUart Vesc_Port_Uart_2;
 VescUart Vesc_Port_Uart_5;
 
 Moteur Moteur1(&Vesc_Port_Uart_2, 0, 20, 1 , false);
 Moteur Moteur2(&Vesc_Port_Uart_5, 0, 10, 1 , false);
+
+Commande_interpreter MyInterpreter;
 
 // ------------------- ESP32 -------------------
 
@@ -18,10 +21,6 @@ Moteur Moteur2(&Vesc_Port_Uart_5, 0, 10, 1 , false);
 //#define TXD2 17
 
 // ---------------------------------------------
-
-String inputString = "";   
-bool inputComplete = false;  
-
 int marcheStep = 0;
 bool activeMarche = false;
 
@@ -30,29 +29,34 @@ void marche();
 void marcheRefresh();
 void handleButtonInterrupt();
 
+void Comm_Marche(String arg);
+void Comm_Arret(String arg);
+void Comm_Stop(String arg);
+void Comm_Position_Moteur1(String arg);
+void Comm_Position_Moteur2(String arg);
+void Comm_Homming(String arg);
+void Comm_Check(String arg);
+
 #define BUTTON_PIN 33
 volatile bool buttonPressed = false;
 
 void setup() {
    
-   Serial.begin(115200);  
+  Serial.begin(115200);  
+  MyInterpreter.begin(&Serial);
 
-// ------------------- ESP32 -------------------
+  // ------------------- ESP32 -------------------
   //VESCSerial.begin(115200, SERIAL_8N1, RXD2, TXD2);
   //MyVescUart.setSerialPort(&VESCSerial);
-// ---------------------------------------------
+  // ---------------------------------------------
 
-// ------------------- Teensy -------------------
+  // ------------------- Teensy ------------------
   Serial2.begin(115200);
   Serial5.begin(115200);
   
   Vesc_Port_Uart_2.setSerialPort(&Serial5);
   Vesc_Port_Uart_5.setSerialPort(&Serial2);
-// ---------------------------------------------
-
-
-  
-  inputString.reserve(50); 
+  // ---------------------------------------------
 
   delay(100);
 
@@ -68,54 +72,35 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP); // Le bouton connecté à GND
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), handleButtonInterrupt, FALLING);
 
+  // ------------- Adding commande ---------------
+  MyInterpreter.addCommand("marche",Comm_Marche);
+  MyInterpreter.addCommand("arret",Comm_Arret);
+  MyInterpreter.addCommand("stop",Comm_Stop);
+  MyInterpreter.addCommand("moteur1",Comm_Position_Moteur1);
+  MyInterpreter.addCommand("moteur2",Comm_Position_Moteur2);
+  MyInterpreter.addCommand("homing",Comm_Homming);
+  MyInterpreter.addCommand("check",Comm_Check);
+  // ---------------------------------------------
 }
 
 void loop() {
   //Moteur1.Refresh();
   //Moteur2.Refresh();
   
+  MyInterpreter.handle();
+
   Moteur1.Refresh_Values(); 
   Moteur2.Refresh_Values(); 
 
   marcheRefresh();
 
-  while (Serial.available()) {
-    char inChar = (char)Serial.read();
-    if (inChar == '\n') {
-      inputComplete = true;
-    } else {
-      inputString += inChar;
-    }
+  if (buttonPressed) {
+    buttonPressed = false;
+    activeMarche = false;
+    Moteur1.stop();        
+    Moteur2.stop();
+    Serial.println("button stop appuyer");
   }
-
-  if (inputComplete) {
-    parseCommand(inputString);  
-    inputString = "";           
-    inputComplete = false;
-  }
-
-    if (buttonPressed) {
-      buttonPressed = false;
-      activeMarche = false;
-      Moteur1.stop();        
-      Moteur2.stop();
-      Serial.println("button stop appuyer");
-    }
-}
-
-bool isNumber(String str) {
-  str.trim();
-  if (str.length() == 0) return false;
-  bool decimalPoint = false;
-  for (unsigned int i = 0; i < str.length(); i++) {
-    if (isDigit(str.charAt(i))) continue;
-    if (str.charAt(i) == '.' && !decimalPoint) {
-      decimalPoint = true;
-      continue;
-    }
-    return false;
-  }
-  return true;
 }
 
 void marcheRefresh() {
@@ -144,119 +129,129 @@ void marche(){
   }
 }
 
+void handleButtonInterrupt() {
+  buttonPressed = true;
+}
 
-void parseCommand(String command) {
-  command.trim();
-  command.toLowerCase();
+// ------------- Function for command ---------------
 
-  // Découpe la commande en deux mots (cmd + cible)
-  int spaceIndex = command.indexOf(' ');
-  if (spaceIndex == -1) {
-    // Ajout pour détecter "marche" sans argument
-    if (command == "marche") {
-      activeMarche = true;
-      return;
-    } else if (command == "arret") {
-      activeMarche = false;
-      marcheStep = 0;
-      Moteur1.setTargetPos(0.0f); // Position du moteur 1
-      Moteur2.setTargetPos(0.0f); // Position du moteur 2
-      Serial.println("Marche arrêtée.");
-      return;
-    } else if (command == "stop"){
+void Comm_Marche(String arg){
+  activeMarche = true;
+}
+
+void Comm_Arret(String arg){
+  activeMarche = false;
+  marcheStep = 0;
+  Moteur1.setTargetPos(0.0f); // Position du moteur 1
+  Moteur2.setTargetPos(0.0f); // Position du moteur 2
+  Serial.println("Marche arrêtée.");
+}
+
+void Comm_Stop(String arg){
+  const int TotalArgs = 1;
+  String args[TotalArgs];
+
+  int numArg = Commande_interpreter::splitArgs(arg,args,TotalArgs);
+
+  if (numArg == 0){
+    Moteur1.stop();
+    Moteur2.stop();
+  }
+
+  if (numArg == 1){
+    if (args[0] == "moteur1"){
       Moteur1.stop();
+    }else if (args[0] == "moteur2"){
       Moteur2.stop();
+    }else {
+      MyInterpreter.println("Error arg not correct :" + args[0]);
     }
-    Serial.println("Commande invalide !");
-    return;
-  }
-
-  String action = command.substring(0, spaceIndex);
-  String target = command.substring(spaceIndex + 1);
-
-  bool commandValide = true;
-
-  // --- Commandes à argument numérique ---
-  if (isNumber(target)) {
-    float value = target.toFloat();
-
-    if (action == "moteur1") {
-      Moteur1.setTargetPos(value);
-      Serial.println("Moteur1 → pos = " + String(value));
-    } else if (action == "moteur2") {
-      Moteur2.setTargetPos(value);
-      Serial.println("Moteur2 → pos = " + String(value));
-    } else {
-      commandValide = false;
-    }
-
-  // --- Commandes sans nombre ---
-  } else {
-    if (target == "moteur1") {
-      if (action == "homing") {
-        Moteur1.SoftwareOffset(0.0f);
-        Serial.println("Homing Moteur1");
-        Serial.println(Moteur1.getCurrentPosition());
-      } else if (action == "check") {
-        if (Moteur1.isConnected()) {
-          Serial.println("Moteur1 connecté");
-        } else {
-          Serial.println("Moteur1 non connecté");
-        }
-      } else if (action == "debug") {
-
-        while(true){
-        if (Moteur1.isConnected()) {
-          Serial.println("Moteur1 connecté");
-          Serial2.println("hello");
-        } else {
-          Serial.println("Moteur1 non connecté");
-          Serial2.println("hello");
-        }
-        }
-
-      }else {
-        commandValide = false;
-      }
-
-    } else if (target == "moteur2") {
-      if (action == "homing") {
-        Moteur2.SoftwareOffset(0.0f);
-        Serial.println("Homing Moteur2");
-        Serial.println(Moteur2.getCurrentPosition());
-      } else if (action == "check") {
-        if (Moteur2.isConnected()) {
-          Serial.println("Moteur2 connecté");
-        } else {
-          Serial.println("Moteur2 non connecté");
-        }
-      }else if (action == "debug") {
-
-        while(true){
-        if (Moteur2.isConnected()) {
-          Serial.println("Moteur2 connecté");
-          //Serial5.println("hello");
-        } else {
-          Serial.println("Moteur2 non connecté");
-          //Serial5.println("hello");
-        }
-        }
-
-      }
-       else {
-        commandValide = false;
-      }
-
-    } else {
-      commandValide = false;
-    }
-  }
-
-  if (!commandValide) {
-    Serial.println("Commande inconnue : " + command);
   }
 }
 
-void handleButtonInterrupt() {
-  buttonPressed = true;
+void Comm_Position_Moteur1(String arg){
+
+  const int TotalArgs = 1;
+  String args[TotalArgs];
+
+  int numArg = Commande_interpreter::splitArgs(arg,args,TotalArgs);
+
+  if (numArg == 1) { 
+    float value = args[0].toFloat();  
+    Moteur1.setTargetPos(value);
+    Serial.println("Moteur1 → pos = " + String(value));
+  } else {
+    Serial.println("Erreur : argument manquant pour Moteur1");
+  }
+}
+
+void Comm_Position_Moteur2(String arg){
+
+  const int TotalArgs = 1;
+  String args[TotalArgs];
+
+  int numArg = Commande_interpreter::splitArgs(arg,args,TotalArgs);
+
+  if (numArg == 1) { 
+    float value = args[0].toFloat();  
+    Moteur2.setTargetPos(value);
+    Serial.println("Moteur2 → pos = " + String(value));
+  } else {
+    Serial.println("Erreur : argument manquant pour Moteur1");
+  }
+}
+
+void Comm_Homming(String arg){
+
+  const int TotalArgs = 1;
+  String args[TotalArgs];
+
+  int numArg = Commande_interpreter::splitArgs(arg,args,TotalArgs);
+
+  if (numArg == 1) { 
+    if (args[0] == "moteur1"){
+      Moteur1.SoftwareOffset(0.0f);
+      Serial.println("Homing Moteur1");
+      Serial.println(Moteur1.getCurrentPosition());
+    }else if (args[0] == "moteur2")
+    {
+      Moteur2.SoftwareOffset(0.0f);
+      Serial.println("Homing Moteur2");
+      Serial.println(Moteur2.getCurrentPosition());
+    }else{
+      Serial.println("Erreur : mauvais argument");
+    }
+    
+  } else {
+    Serial.println("Erreur : argument manquant");
+  }
+}
+void Comm_Check(String arg){
+
+  const int TotalArgs = 1;
+  String args[TotalArgs];
+
+  int numArg = Commande_interpreter::splitArgs(arg,args,TotalArgs);
+
+  if (numArg == 1) { 
+    if (args[0] == "moteur1"){
+      if (Moteur1.isConnected()) {
+        Serial.println("Moteur1 connecté");
+      } else {
+        Serial.println("Moteur1 non connecté");
+      }
+    }else if (args[0] == "moteur2")
+    {
+        if (Moteur2.isConnected()) {
+          Serial.println("Moteur2 connecté");
+        } else {
+          Serial.println("Moteur2 non connecté");
+        }
+    }else{
+      Serial.println("Erreur : mauvais argument");
+    }
+    
+  } else {
+    Serial.println("Erreur : argument manquant");
+  }
 }

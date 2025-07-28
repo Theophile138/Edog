@@ -46,83 +46,6 @@ ERROR Moteur::setTargetPos(float targetPos) {
     return errorCode;
 }
 
-ERROR Moteur::Refresh() {
-
-    unsigned long temps = millis();
-        
-        if (temps - lastUpdateTime >= _timeBetweenSteps) {
-            lastUpdateTime = temps;
-            
-            if (_targetPos >= 0.0f){
-
-                float angleDiff = _targetPos - _theoreticalPos;
-                
-                if (_debugMode) {
-                    Serial.print("Target Position: ");
-                    Serial.println(_targetPos);
-                    Serial.print("Theoretical Position: ");
-                    Serial.println(_theoreticalPos);
-                    Serial.print("Angle Difference: ");
-                    Serial.println(angleDiff);
-                }
-
-                if( angleDiff != 0) {
-                
-
-                    if (abs(angleDiff) > _maxAngleDiff) {
-                        if (angleDiff > 0) {
-                            _theoreticalPos = _theoreticalPos + _maxAngleDiff;
-                            
-                            if (_debugMode) {
-                                Serial.print("Adjusting Position by Max Angle Diff: ");
-                                Serial.println(_theoreticalPos);
-                            }
-                            
-                            _MyVescUart->setPos(_theoreticalPos + _softwareOffset, _canId);
-                        } else {
-                            _theoreticalPos = _theoreticalPos - _maxAngleDiff;
-
-                            if (_debugMode) {
-                                Serial.print("Adjusting Position by Max Angle Diff: ");
-                                Serial.println(_theoreticalPos);
-                            }
-
-                            _MyVescUart->setPos(_theoreticalPos + _softwareOffset, _canId);
-                        }
-
-                    } else {
-                        _theoreticalPos = _targetPos;
-                        _MyVescUart->setPos(_targetPos + _softwareOffset, _canId);
-                        
-
-                        if (_debugMode) {
-                                Serial.print("End so _theoreticalPos = targetPos ");
-                                Serial.println(_theoreticalPos);
-                            }
- 
-                    }
-                }else{
-                    if (_inPosition == false) {
-                        _inPosition = true;
-                        _MyVescUart->setPos(_targetPos + _softwareOffset, _canId); // Set the motor to the target position
-                        if (_debugMode) {
-                            Serial.println("Motor is in position.");
-                        }
-                    }else{
-                        _MyVescUart->sendKeepalive(_canId);
-                    }
-                }
-            }else{
-                begin(); // Reinitialize the motor if target position is invalid
-                Serial.println("Target position is invalid, reinitializing motor.");
-            }
-        }
-
-    //delay(500);
-
-    return NONE;
-}
-
 void Moteur::SoftwareOffset(float offset_deg) {
     
     Serial.print("Setting software offset to: ");
@@ -158,7 +81,6 @@ ERROR Moteur::Refresh_Values() {
 
                 if( angleDiff != 0) {
                 
-
                     if (abs(angleDiff) > _maxAngleDiff) {
                         if (angleDiff > 0) {
                             _theoreticalPos = _theoreticalPos + _maxAngleDiff;
