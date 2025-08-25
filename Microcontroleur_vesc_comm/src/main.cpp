@@ -8,8 +8,8 @@
 VescUart Vesc_Port_Uart_2;
 VescUart Vesc_Port_Uart_5;
 
-Moteur Moteur2(&Vesc_Port_Uart_2, 0, 2, 0.25 , false);
-Moteur Moteur1(&Vesc_Port_Uart_5, 0, 2, 0.117 , false);
+Moteur Moteur2(&Vesc_Port_Uart_2, 0, 1, 0.25 , false);
+Moteur Moteur1(&Vesc_Port_Uart_5, 0, 1, 0.117 , false);
 
 Commande_interpreter MyInterpreter;
 
