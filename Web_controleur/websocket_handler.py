@@ -9,10 +9,14 @@ import subprocess
 import platform
 import shutil
 import sys
+import moteur_control.inverse_kinematics as mc
+
 
 serial_mgr = SerialManager()
 
 ongoing_uploads = {}
+
+saut_task = None
 
 
 def list_firmware_files():
@@ -263,6 +267,8 @@ async def read_serial_loop(websocket):
 
 
 async def websocket_handler(websocket):
+    global saut_task
+
     send_task = asyncio.create_task(send_rotation_data(websocket))
     read_task = None
     client_id = id(websocket)
@@ -386,6 +392,68 @@ async def websocket_handler(websocket):
                         "error": f"Erreur initialisation upload: {str(e)}"
                     }))
 
+            elif msg.get("type") == "saut":
+                try:
+                    # Paramètres reçus du frontend
+                    #vitesse = msg.get("vitesse", 1.0)  # secondes pour un aller-retour complet
+                    #y_min = msg.get("y_min", -20.0)
+                    #y_max = msg.get("y_max", -5.0)
+                    #step_count = msg.get("steps", 50)
+
+                    vitesse = 0.01  # secondes pour un aller-retour complet
+                    y_min = -30.0
+                    y_max = -40.0
+                    step_count = 50
+
+
+                    # Stopper toute boucle existante (optionnel)
+                    if "saut_task" in globals() and saut_task and not saut_task.done():
+                        saut_task.cancel()
+
+                    async def saut_loop():
+                        x = 0.0
+                        duration = vitesse  # total pour aller-retour
+                        half_cycle_time = duration / 2
+                        dt = half_cycle_time / step_count
+
+                        while True:
+                            # Phase descendante (y_min -> y_max)
+                            for i in range(step_count):
+                                y = y_min + (y_max - y_min) * (i / step_count)
+                                phi, theta = mc.inverse_kinematics_2d_flexible(x, y, d1=25.25, d2=18, theta_max_deg=180)
+                                phi = phi % (2 * math.pi)
+                                theta = theta % (2 * math.pi)
+                                message = f"angle phi={phi:.4f};theta={theta:.4f}\n"
+                                serial_mgr.send(message)
+                                await asyncio.sleep(dt)
+
+                            # Phase montante (y_max -> y_min)
+                            for i in range(step_count):
+                                y = y_max - (y_max - y_min) * (i / step_count)
+                                phi, theta = mc.inverse_kinematics_2d_flexible(x, y, d1=25.25, d2=18, theta_max_deg=180)
+                                phi = phi % (2 * math.pi)
+                                theta = theta % (2 * math.pi)
+                                message = f"angle phi={phi:.4f};theta={theta:.4f}\n"
+                                serial_mgr.send(message)
+                                await asyncio.sleep(dt)
+
+                    saut_task = asyncio.create_task(saut_loop())
+
+                    await websocket.send(json.dumps({
+                        "type": "saut_ack",
+                        "success": True,
+                        "message": f"Saut lancé avec y de {y_min} à {y_max} en {vitesse}s"
+                    }))
+
+                except Exception as e:
+                    await websocket.send(json.dumps({
+                        "type": "saut_ack",
+                        "success": False,
+                        "error": str(e)
+                    }))
+
+
+
     except Exception as e:
         print(f"[ERROR] Erreur WebSocket: {e}")
     finally:
@@ -394,6 +462,12 @@ async def websocket_handler(websocket):
         send_task.cancel()
         if read_task:
             read_task.cancel()
+
+        try:
+            if "saut_task" in globals() and saut_task and not saut_task.done():
+                saut_task.cancel()
+        except:
+            pass
 
         # Nettoyer les uploads en cours
         if client_id in ongoing_uploads:

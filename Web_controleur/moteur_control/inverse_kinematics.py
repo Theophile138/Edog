@@ -51,7 +51,7 @@ def inverse_kinematics_2d_flexible(x, y, d1, d2, theta_max_deg):
 
 
 def draw_leg(x_target, y_target, d1, d2):
-    theta_max_deg = 150
+    theta_max_deg = 180
 
     phi, theta = inverse_kinematics_2d_flexible(x_target, y_target, d1, d2, theta_max_deg)
 
@@ -89,4 +89,4 @@ def draw_leg(x_target, y_target, d1, d2):
 
 
 # Exemple d’utilisation :
-draw_leg(x_target=0, y_target=1, d1=4, d2=4)
+draw_leg(x_target=0, y_target=-30, d1=25.25, d2=18)

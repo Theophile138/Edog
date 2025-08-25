@@ -18,7 +18,8 @@
         <ul>
           <li><button onclick="showPage('home')" class="w-full text-left p-4 hover:bg-gray-700">Home</button></li>
           <li><button onclick="showPage('esp32')" class="w-full text-left p-4 hover:bg-gray-700">ESP32</button></li>
-          <li><button onclick="showPage('console')" class="w-full text-left p-4 hover:bg-gray-700">Console</button></li>
+          <li><button onclick="showPage('moteur')" class="w-full text-left p-4 hover:bg-gray-700">Moteur</button></li>
+          <li><button onclick="showPage('console')" class="w-full text-left p-4 hover:bg-gray-700">Console</button></li> 
         </ul>
       </nav>
     </aside>
@@ -41,14 +42,16 @@
         <div class="mt-6 bg-white p-4 rounded shadow h-[500px]" id="three-container">
           <!-- La scène 3D se charge ici -->
         </div>
+        <div class="grid gap-6 mt-6">
+          <div class="bg-white p-4 rounded shadow">
+            <h3 class="font-bold mb-2">Robot :</h3>
+            <div class="flex justify-left gap-6 mt-4">
+              <button onclick="saut()" class="bg-green-600 text-white px-8 py-2 rounded hover:bg-green-700">Saut</button>
+              <button onclick="stop3D()" class="bg-red-600 text-white px-8 py-2 rounded hover:bg-red-700">Stop</button>
+            </div>
 
-          <!-- Bouton Stop -->
-        <div class="mt-4 flex justify-center">
-            <button onclick="stop3D()" class="bg-red-600 text-white px-8 py-2 rounded hover:bg-red-700">
-                Stop
-            </button>
+          </div>
         </div>
-
       </section>
 
       <!-- ESP32 -->
@@ -97,6 +100,13 @@
         </div>
       </section>
 
+	<!-- Moteur -->
+	<section id="moteur" class="hidden">
+		<h2 class="text-2xl font-semibold mb-4">Moteurs</h2>
+		<div id="motors-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+	</section>
+
+
       <!-- Console -->
       <section id="console" class="hidden">
         <h2 class="text-2xl font-semibold mb-4">Console série</h2>
@@ -118,34 +128,73 @@
         </div>
       </section>
     </main>
-
+	
     <!-- Script -->
     <script type="module" src="./3d_model_rendering.js"></script>
     <script type="module" src="./esp32.js"></script>
+	<script type="module" src="./moteur_info.js"></script>
+
 
     <script>
-      function showPage(id) {
-        document.querySelectorAll('main section').forEach(sec => sec.classList.add('hidden'));
-        document.getElementById(id).classList.remove('hidden');
-      }
+		function showPage(id) {
+			document.querySelectorAll('main section').forEach(sec => sec.classList.add('hidden'));
+			document.getElementById(id).classList.remove('hidden');
+
+			if (id === 'moteur') {
+				showMotors()
+			}
+		}
 
       showPage('home'); // Default page
 
-      //function sendSerialCommand() {
-      //  const input = document.getElementById('serial-input');
-      //  const output = document.getElementById('serial-output');
-      //  const cmd = input.value.trim();
-      //  if (cmd === "") return;
-
-      //  output.innerHTML += `> ${cmd}<br>`;
-      //  input.value = "";
-
-        // Simule une réponse pour le moment
-      //  setTimeout(() => {
-      //    output.innerHTML += `<span class="text-yellow-300">Réponse: OK</span><br>`;
-      //    output.scrollTop = output.scrollHeight;
-      //  }, 500);
-      //}
     </script>
+	
+	<script>
+		let commandHistory = [];
+		let historyIndex = -1;
+
+		document.getElementById("serial-input").addEventListener("keydown", function(e) {
+			if (e.key === "Enter") {
+				const cmd = this.value.trim();
+				if (cmd !== "") {
+					commandHistory.push(cmd);
+					historyIndex = commandHistory.length;
+				}
+			}
+
+			if (e.key === "ArrowUp") {
+				if (historyIndex > 0) {
+					historyIndex--;
+					this.value = commandHistory[historyIndex];
+				}
+			e.preventDefault();
+			}
+
+			if (e.key === "ArrowDown") {
+				if (historyIndex < commandHistory.length - 1) {
+					historyIndex++;
+					this.value = commandHistory[historyIndex];
+				} else {
+					historyIndex = commandHistory.length;
+					this.value = "";
+				}
+				e.preventDefault();
+			}
+		});
+</script>
+
+<script>
+  const input = document.getElementById("serial-input");
+
+  input.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sendSerialCommand(); 
+	  
+    }
+  });
+</script>
+
+
   </body>
 </html>

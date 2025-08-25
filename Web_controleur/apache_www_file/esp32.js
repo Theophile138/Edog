@@ -143,9 +143,21 @@ ws.onmessage = (event) => {
     if (autoScroll === true) {
       outputSerial.scrollTop = outputSerial.scrollHeight;
     }
+
+    if (msg.type === "saut_ack") {
+        if (msg.success) {
+
+        } else {
+            alert(`Erreur lors du saut : ${msg.error}`);
+        }
+    }
   }
 
 };
+
+window.saut = function (){
+    ws.send(JSON.stringify({ type: "saut" }));
+}
 
 
 window.connectESP32 = function () {

@@ -22,3 +22,6 @@ cd Edog/EdogController
 source env/bin/activate
 python3 main.py
 
+#Demarage serveur web sur python
+cd .\apache_www_file\
+npx vite --host  

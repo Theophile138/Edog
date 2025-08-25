@@ -13,7 +13,7 @@ typedef enum {
 class Moteur
 {
   public:
-    Moteur(VescUart* MyVescUart, uint8_t canId, int timeBetweenSteps = 5, int maxAngleDiff = 1, bool debugMode = false);
+    Moteur(VescUart* MyVescUart, uint8_t canId, int timeBetweenSteps = 5, float maxAngleDiff = 1, bool debugMode = false);
     
     ERROR begin();
     
@@ -32,6 +32,13 @@ class Moteur
 
     void stop();
 
+    float getRealPosition();
+
+    void setMaxAngleDiff(float maxAngleDiff);
+    float getMaxAngleDiff();
+
+    void keepAlive();
+
   private:
     
     float theoricalPosToReel(float theoricalPos);
@@ -46,7 +53,7 @@ class Moteur
     
     uint8_t _canId; // CAN ID of the VESC
     int _timeBetweenSteps; // Time between each step in milliseconds
-    int _maxAngleDiff; // Maximum angle difference for each step
+    float _maxAngleDiff; // Maximum angle difference for each step
 
     float _targetPos; // Target position of the motor in degrees
     float _theoreticalPos; // Theoretical position of the motor in degrees

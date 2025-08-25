@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-static const int MAX_COMMANDS = 10;
+static const int MAX_COMMANDS = 50;
 
 typedef void (*CommandFunction)(String args);
 

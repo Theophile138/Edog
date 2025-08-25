@@ -1,6 +1,6 @@
 #include "moteur.h"
 
-Moteur::Moteur(VescUart* MyVescUart, uint8_t canId, int timeBetweenSteps, int maxAngleDiff, bool debugMode) {
+Moteur::Moteur(VescUart* MyVescUart, uint8_t canId, int timeBetweenSteps, float maxAngleDiff, bool debugMode) {
     _MyVescUart = MyVescUart;
     _canId = canId;
     _timeBetweenSteps = timeBetweenSteps;
@@ -36,12 +36,9 @@ ERROR Moteur::setTargetPos(float targetPos) {
     
     ERROR errorCode = NONE;
 
-    if (targetPos >= 0.0f && targetPos < 360.0f) {
-        _targetPos = targetPos;
-        _inPosition = false;
-    }else{
-        errorCode = WRONG_NUMBER;
-    }
+    _targetPos = targetPos;
+    _inPosition = false;
+
     
     return errorCode;
 }
@@ -54,11 +51,13 @@ void Moteur::SoftwareOffset(float offset_deg) {
 
         _softwareOffset = _MyVescUart->data.pidPos - offset_deg; // Set the software offset
         _theoreticalPos = offset_deg; 
-
+ 
         if (_debugMode) {
             _MyVescUart->getVescValues(_canId); // Refresh values to get the current position
             Serial.print("Current Position after setting offset: ");
             Serial.println(_MyVescUart->data.pidPos - _softwareOffset);
+            Serial.print("Reel pos: ");
+            Serial.println(_MyVescUart->data.pidPos);
         }
 
     } else {
@@ -78,6 +77,10 @@ ERROR Moteur::Refresh_Values() {
         if (_inPosition == false){
         
             float angleDiff = _targetPos - _theoreticalPos;
+            if (_debugMode) {
+                Serial.print("Angle Difference: ");
+                Serial.println(angleDiff);
+            }
 
                 if( angleDiff != 0) {
                 
@@ -85,17 +88,23 @@ ERROR Moteur::Refresh_Values() {
                         if (angleDiff > 0) {
                             _theoreticalPos = _theoreticalPos + _maxAngleDiff;
                             _MyVescUart->setPos(theoricalPosToReel(_theoreticalPos), _canId);
-                            Serial.print("Moteur ID :" + String(_canId) + " Adjusting Position by Max Angle Diff: " + String(_theoreticalPos) + "\n");
+                            if (_debugMode) {
+                                Serial.print("Moteur ID :" + String(_canId) + " Adjusting Position by Max Angle Diff: " + String(_theoreticalPos) + "\n");
+                            }
                         } else {
                             _theoreticalPos = _theoreticalPos - _maxAngleDiff;
                             _MyVescUart->setPos(theoricalPosToReel(_theoreticalPos), _canId);
-                            Serial.print("Moteur ID :" + String(_canId) + " Adjusting Position by Max Angle Diff: " + String(_theoreticalPos) + "\n");
+                            if (_debugMode) {
+                                Serial.print("Moteur ID :" + String(_canId) + " Adjusting Position by Max Angle Diff: " + String(_theoreticalPos) + "\n");
+                            }
                         }
 
                     } else {
                         _theoreticalPos = _targetPos;
                         _MyVescUart->setPos(theoricalPosToReel(_theoreticalPos), _canId);
-                        Serial.print("Moteur ID :" + String(_canId) + " Adjusting Position by Max Angle Diff: " + String(_theoreticalPos) + "\n");
+                        if (_debugMode) {
+                            Serial.print("Moteur ID :" + String(_canId) + " Adjusting Position by Max Angle Diff: " + String(_theoreticalPos) + "\n");
+                        }
                     }
                 }else{
                     if (_inPosition == false) {
@@ -131,6 +140,13 @@ float Moteur::getCurrentPosition() {
     return _theoreticalPos;
 }
 
+float Moteur::getRealPosition() {
+    if (_MyVescUart->getVescValues(_canId)) {
+        return _MyVescUart->data.pidPos; // Return the real position adjusted by the software offset
+    }
+    return -1.0f; // Return -1 if unable to get the position
+}
+
 bool Moteur::isConnected() {
     return _MyVescUart->getVescValues(_canId);
 }
@@ -149,4 +165,16 @@ void Moteur::stop() {
     if (_debugMode) {
         Serial.println("Motor stopped.");
     }
+}
+
+void Moteur::setMaxAngleDiff(float maxAngleDiff) {
+    _maxAngleDiff = maxAngleDiff;
+}
+
+float Moteur::getMaxAngleDiff() {
+    return _maxAngleDiff;
+}
+
+void Moteur::keepAlive() {
+    _MyVescUart->sendKeepalive(_canId);
 }

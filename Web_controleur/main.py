@@ -5,6 +5,7 @@ import os
 from aiohttp import web
 from websocket_handler import websocket_handler
 from datetime import datetime
+import moteur_control.inverse_kinematics as mc
 
 # Serveur HTTP pour les uploads
 async def handle_upload(request):

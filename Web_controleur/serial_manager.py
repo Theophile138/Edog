@@ -32,6 +32,7 @@ class SerialManager:
         if not self.is_connected():
             raise Exception("Pas de port série connecté")
         self.connection.write((message + "\n").encode())
+        print(message)
 
 
     def read_available(self):
