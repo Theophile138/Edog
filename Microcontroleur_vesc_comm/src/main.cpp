@@ -5,11 +5,27 @@
 
 #include "InverseKinematics.h"
 
+#include <Adafruit_NeoPixel.h>
+
+// Nombre de LEDs dans ton strip NeoPixel
+#define NUMPIXELS 21      
+
+// Pin utilisée
+#define PIN 23             
+
+// Initialisation de l'objet NeoPixel
+Adafruit_NeoPixel strip(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+
+unsigned long ledTime = 0; // Last time the motor was updated
+
+uint32_t Wheel(byte WheelPos);
+void rainbowCycle(uint8_t wait);
+
 VescUart Vesc_Port_Uart_2;
 VescUart Vesc_Port_Uart_5;
 
-Moteur Moteur2(&Vesc_Port_Uart_2, 0, 1, 0.25 , false);
-Moteur Moteur1(&Vesc_Port_Uart_5, 0, 1, 0.117 , false);
+Moteur Moteur2(&Vesc_Port_Uart_2, 0, 1000, 0.25 , false);
+Moteur Moteur1(&Vesc_Port_Uart_5, 0, 1000, 0.117 , false);
 
 Commande_interpreter MyInterpreter;
 
@@ -83,6 +99,10 @@ void setup() {
   Serial.begin(115200);  
   MyInterpreter.begin(&Serial);
 
+  strip.begin();            // Initialiser le strip
+  strip.show();             // Éteindre toutes les LEDs au démarrage
+  strip.setBrightness(255);  // Réglage de la luminosité (0-255)
+
   // ------------------- ESP32 -------------------
   //VESCSerial.begin(115200, SERIAL_8N1, RXD2, TXD2);
   //MyVescUart.setSerialPort(&VESCSerial);
@@ -133,7 +153,9 @@ void setup() {
 void loop() {
   //Moteur1.Refresh();
   //Moteur2.Refresh();
-  
+
+  rainbowCycle(10);  // Appel de l’effet arc-en-ciel
+
   MyInterpreter.handle();
 
   Moteur1.Refresh_Values(); 
@@ -194,7 +216,7 @@ void circleMarcheRefresh() {
 void circleMarche(){
   if(Moteur1.finish() && Moteur2.finish()) {
 
-    Serial.println("Circle marche : ");
+    //Serial.println("Circle marche : ");
 
     float d1 = 25.5f;   // longueur premier segment
     float d2 = 18.5f;   // longueur second segment
@@ -211,7 +233,7 @@ void circleMarche(){
     Moteur1.setTargetPos(Result.phi);
     Moteur2.setTargetPos(Result.theta);
 
-    circleMarche_a += 0.1f;
+    circleMarche_a += 0.05f;
     if (circleMarche_a > 80.0f) {
       circleMarche_a = 0.0f;
     }
@@ -393,6 +415,40 @@ void jump() {
 void handleButtonInterrupt() {
   buttonPressed = true;
 }
+
+void rainbowCycle(uint8_t wait) {
+  static uint16_t j = 0;  // garde en mémoire l’avancement entre deux appels
+  uint16_t i;
+
+  unsigned long temps = millis();
+  if (temps - ledTime >= wait) {
+    ledTime = temps;
+
+    for (i = 0; i < strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+    }
+    strip.show();
+
+    j++; // avance d’une étape
+    if (j >= 256 * 5) { // 5 cycles de couleurs max
+      j = 0;
+    }
+  }
+}
+
+// Fonction pour générer les couleurs de l’arc-en-ciel
+uint32_t Wheel(byte WheelPos) {
+  if (WheelPos < 85) {
+    return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  } else if (WheelPos < 170) {
+    WheelPos -= 85;
+    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } else {
+    WheelPos -= 170;
+    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+}
+
 
 // ------------- Function for command ---------------
 

@@ -1,6 +1,6 @@
 #include "moteur.h"
 
-Moteur::Moteur(VescUart* MyVescUart, uint8_t canId, int timeBetweenSteps, float maxAngleDiff, bool debugMode) {
+Moteur::Moteur(VescUart* MyVescUart, uint8_t canId, unsigned long timeBetweenSteps, float maxAngleDiff, bool debugMode) {
     _MyVescUart = MyVescUart;
     _canId = canId;
     _timeBetweenSteps = timeBetweenSteps;
@@ -70,7 +70,7 @@ void Moteur::SoftwareOffset(float offset_deg) {
 // Refresh method to update motor position with the reel value from VESC (maybe slower ?)
 ERROR Moteur::Refresh_Values() {
     
-    unsigned long temps = millis();
+    unsigned long temps = micros();
     if (temps - lastUpdateTime >= _timeBetweenSteps) {
         lastUpdateTime = temps;
 
